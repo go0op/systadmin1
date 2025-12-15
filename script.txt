@@ -90,7 +90,9 @@ restore:
 sudo /usr/local/bin/backup_restore.py restore
 verify files exist:
 ls -la /var/tmp/backups | tail
+^ should show a backup and then a date
 ls -la /var/tmp/restore
+^ should show student in the files listing
 
 5. add to cronjob
 sudo crontab -e

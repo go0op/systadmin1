@@ -1,0 +1,38 @@
+ROCKY
+1) Install Apache
+sudo dnf -y install httpd
+
+2) Enable + start service
+sudo systemctl enable --now httpd
+sudo systemctl status httpd --no-pager
+
+3) Open firewall for HTTP
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-services
+
+4) Create a test page
+echo "Hello from Apache HTTP" | sudo tee /var/www/html/index.html
+sudo ls -l /var/www/html/index.html
+
+5) Test locally (on the Rocky VM)
+curl http://localhost
+ss -tulpn | grep :80
+
+
+WINDOWS
+6) Test from another machine
+
+In a browser:
+
+http://<rocky-ip>/
+
+Find IP:
+
+ip a
+
+Quick troubleshoot
+sudo systemctl restart httpd
+sudo journalctl -u httpd -n 50
+sudo firewall-cmd --list-all
+getenforce

@@ -1,0 +1,125 @@
+Minimal RAID Setup (Rocky Linux) — Updated, PC/VM-safe
+PC/VM-SPECIFIC: Identify the correct disks (DO THIS FIRST)
+
+List disks with sizes + mountpoints:
+
+lsblk -o NAME,SIZE,MODEL,TYPE,MOUNTPOINT
+
+
+Pick the disks that are:
+
+TYPE = disk
+
+Have NO mountpoint and no partitions under them
+
+Are the “extra” disks you added (often all same size)
+
+✅ Usually sda is your OS disk (has / mounted) — do not touch it.
+Your RAID disks are commonly sdb, sdc, sdd, etc. but confirm.
+
+Write down your RAID disks:
+
+RAID1 needs 2 disks: /dev/sdX /dev/sdY
+
+RAID5 needs 3 disks: /dev/sdX /dev/sdY /dev/sdZ
+
+RAID 1 (Mirror) — Minimal Steps
+Copy/paste steps (replace disk letters with YOUR confirmed disks)
+1) Install tools (same everywhere)
+sudo dnf -y install mdadm
+
+2) Wipe signatures on ONLY the RAID disks (PC-specific)
+
+Replace X Y:
+
+sudo wipefs -a /dev/sdX /dev/sdY
+
+3) Create RAID array (same everywhere)
+sudo mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/sdX /dev/sdY
+
+4) Make filesystem + mount (same everywhere)
+sudo mkfs.xfs /dev/md0
+sudo mkdir -p /mnt/raid1
+sudo mount /dev/md0 /mnt/raid1
+df -h /mnt/raid1
+
+5) Verify RAID is building/healthy (same everywhere)
+cat /proc/mdstat
+sudo mdadm --detail /dev/md0
+
+RAID 5 (Parity) — Minimal Steps
+Copy/paste steps (replace disk letters with YOUR confirmed disks)
+1) Install tools
+sudo dnf -y install mdadm
+
+2) Wipe signatures (replace X Y Z)
+sudo wipefs -a /dev/sdX /dev/sdY /dev/sdZ
+
+3) Create RAID5 array
+sudo mdadm --create /dev/md0 --level=5 --raid-devices=3 /dev/sdX /dev/sdY /dev/sdZ
+
+4) Filesystem + mount
+sudo mkfs.xfs /dev/md0
+sudo mkdir -p /mnt/raid5
+sudo mount /dev/md0 /mnt/raid5
+df -h /mnt/raid5
+
+5) Verify
+cat /proc/mdstat
+sudo mdadm --detail /dev/md0
+
+Persist Across Reboot (IMPORTANT) — Works for RAID1 or RAID5
+PC/VM-SPECIFIC: your mountpoint
+
+Pick the mountpoint you used:
+
+RAID1 → /mnt/raid1
+
+RAID5 → /mnt/raid5
+
+1) Save RAID config (same everywhere)
+sudo mdadm --detail --scan | sudo tee /etc/mdadm.conf
+
+2) Get the UUID (same everywhere)
+sudo blkid /dev/md0
+
+
+Copy the UUID="...." value.
+
+3) Add to fstab (same everywhere)
+sudo nano /etc/fstab
+
+
+Add ONE line (choose the correct mountpoint):
+
+RAID1:
+
+UUID=<your-uuid>  /mnt/raid1  xfs  defaults,nofail  0 0
+
+
+RAID5:
+
+UUID=<your-uuid>  /mnt/raid5  xfs  defaults,nofail  0 0
+
+4) Test fstab (same everywhere)
+sudo umount /mnt/raid1  # or /mnt/raid5
+sudo mount -a
+df -h | grep raid
+
+5) Reboot + verify (same everywhere)
+sudo reboot
+
+
+After reboot:
+
+cat /proc/mdstat
+sudo mdadm --detail /dev/md0
+df -h | grep raid
+
+What changes between PCs/VMs (ONLY these)
+
+The disk names (/dev/sdb, /dev/sdc, etc.) → you must confirm
+
+The source of disks (size/model) → confirm with lsblk
+
+Mountpoint name is your choice (but keep consistent with fstab)

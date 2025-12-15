@@ -1,0 +1,59 @@
+1) Install vsftpd
+sudo dnf -y install vsftpd
+
+2) Enable + start service
+sudo systemctl enable --now vsftpd
+sudo systemctl status vsftpd --no-pager
+
+3) Create an FTP user
+sudo useradd -m ftpuser
+sudo passwd ftpuser
+
+4) Configure vsftpd (basic local-user login)
+
+Edit config:
+
+sudo nano /etc/vsftpd/vsftpd.conf
+
+
+Make sure these settings exist (add if missing):
+
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+chroot_local_user=YES
+allow_writeable_chroot=YES
+
+
+Restart:
+
+sudo systemctl restart vsftpd
+
+5) Open firewall for FTP
+sudo firewall-cmd --permanent --add-service=ftp
+sudo firewall-cmd --reload
+
+6) SELinux (if logins fail / permission denied)
+
+Easiest lab toggle to allow FTP home dirs:
+
+sudo setsebool -P ftp_home_dir on
+
+7) Test locally
+ftp localhost
+# login: ftpuser
+# password: (whatever you set)
+
+8) Test from another machine
+
+Use an FTP client or Windows File Explorer:
+
+ftp://<rocky-ip>/
+
+Login: ftpuser
+
+Quick troubleshoot
+sudo journalctl -u vsftpd -n 50
+sudo ss -tulpn | grep :21
+sudo firewall-cmd --list-services
+getenforce
