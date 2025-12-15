@@ -1,0 +1,83 @@
+Identity and system info
+whoami (current user)
+id (UID/GIDs/groups)
+hostnamectl (hostname + OS info)
+uname -a (kernel info)
+date (time)
+
+Navigation and files
+pwd (where you are)
+ls -la (detailed listing)
+cd (change dir)
+cp -r (copy dirs)
+mv (move/rename)
+rm -rf (delete — dangerous)
+mkdir -p (make dirs)
+touch (create empty file)
+cat, less, tail -f (view files)
+
+Permissions and ownership
+chmod 755 file / chmod +x script
+chown user:group file
+umask (default perms)
+
+Searching
+find /path -name "file"
+grep -R "text" /path
+ss -tulpn (list listening ports)
+
+Services and logs (systemd)
+systemctl status <svc>
+systemctl enable --now <svc>
+systemctl restart <svc>
+journalctl -u <svc> -n 50
+journalctl -xe | tail
+
+Networking
+ip a (IP addresses)
+ip r (routing table)
+ping <ip>
+nslookup name / dig name
+curl http://ip
+nmcli dev show | grep DNS (DNS info)
+
+Firewall
+firewall-cmd --list-services
+firewall-cmd --permanent --add-service=http
+firewall-cmd --reload
+firewall-cmd --list-all
+
+Packages (Rocky/RHEL)
+dnf -y install <pkg>
+dnf -y update
+rpm -q <pkg> (is it installed?)
+which <cmd> (where is command)
+
+Storage + disks
+lsblk -o NAME,SIZE,MODEL,TYPE,MOUNTPOINT
+blkid (UUIDs)
+df -h (filesystem free space)
+du -sh * (folder sizes)
+
+Mounting
+mount (what’s mounted)
+mount /dev/xxx /mnt/point
+umount /mnt/point
+nano /etc/fstab (persist mounts)
+
+RAID (mdadm)
+mdadm --create /dev/md0 ...
+cat /proc/mdstat
+mdadm --detail /dev/md0
+mdadm --detail --scan | tee /etc/mdadm.conf
+
+Cron
+crontab -e (your user)
+sudo crontab -e (root)
+crontab -l / sudo crontab -l
+systemctl status crond
+journalctl -u crond --since "10 min ago"
+
+Handy editors
+nano file
+vi file (if nano isn’t available)
