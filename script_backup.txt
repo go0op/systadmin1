@@ -1,0 +1,122 @@
+1. create files
+sudo mkdir -p /var/tmp/backups /var/tmp/restore
+sudo chmod 755 /var/tmp/backups /var/tmp/restore
+
+2. make script as /usr/local/bin/backup_restore.py
+(sudo nano /usr/local/bin/backup_restore.py)
+#!/usr/bin/env python3
+import argparse
+import glob
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime
+
+SOURCE_DEFAULT = "/home/student"
+
+BACKUP_DIR = "/var/tmp/backups"
+RESTORE_DIR = "/var/tmp/restore"
+
+TAR = "/usr/bin/tar"   # full path helps cron reliability
+
+
+def run(cmd: list[str]) -> int:
+    print("RUN:", " ".join(cmd))
+    return subprocess.call(cmd)
+
+
+def backup(source: str) -> int:
+    if not os.path.isdir(source):
+        print(f"ERROR: source directory not found: {source}", file=sys.stderr)
+        return 1
+
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    archive = f"{BACKUP_DIR}/backup-{ts}.tar.gz"
+
+    parent = os.path.dirname(source.rstrip("/"))
+    base = os.path.basename(source.rstrip("/"))
+
+    # Example: tar -czf /var/tmp/backups/backup-...tar.gz -C /home student
+    return run([TAR, "-czf", archive, "-C", parent, base])
+
+
+def restore_latest() -> int:
+    backups = sorted(glob.glob(f"{BACKUP_DIR}/backup-*.tar.gz"))
+    if not backups:
+        print(f"ERROR: no backups found in {BACKUP_DIR}", file=sys.stderr)
+        return 1
+
+    latest = backups[-1]
+    print("LATEST:", latest)
+
+    # Make restore directory "fresh"
+    if os.path.isdir(RESTORE_DIR):
+        shutil.rmtree(RESTORE_DIR)
+    os.makedirs(RESTORE_DIR, exist_ok=True)
+
+    return run([TAR, "-xzf", latest, "-C", RESTORE_DIR])
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="Cron-friendly backup/restore tool (tar.gz)")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    b = sub.add_parser("backup", help="Create a backup tar.gz")
+    b.add_argument("--source", default=SOURCE_DEFAULT)
+
+    sub.add_parser("restore", help="Restore the latest backup (fresh restore dir)")
+
+    args = p.parse_args()
+
+    if args.cmd == "backup":
+        return backup(args.source)
+    return restore_latest()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
+3. make it executable 
+sudo chmod +x /usr/local/bin/backup_restore.py
+
+4. test it manually
+backup:
+sudo /usr/local/bin/backup_restore.py backup --source /home/student
+restore:
+sudo /usr/local/bin/backup_restore.py restore
+verify files exist:
+ls -la /var/tmp/backups | tail
+ls -la /var/tmp/restore
+
+5. add to cronjob
+sudo crontab -e
+
+* * * * * /usr/local/bin/backup_restore.py backup --source /home/student >> /var/tmp/backup_restore.log 2>&1
+*/2 * * * * /usr/local/bin/backup_restore.py restore >> /var/tmp/backup_restore.log 2>&1
+
+6. confirm cron is running it 
+watch log:
+sudo tail -f /var/tmp/backup_restore.log
+confirm backups being created:
+ls -lt /var/tmp/backups | head
+
+check crontab installed
+rpm -q cronie
+if not -> sudo dnf -y install cronie
+check service is running -> systemctl status crond
+enable if needed -> sudo systemctl enable --now crond
+confirm my cronjobs exist-> sudo crontab -l
+check cronjob running my stuff-> sudo journalctl -u crond --since "10 min ago"
+
+confirm tar exists:
+which tar
+ls -l /usr/bin/tar
+if missing->sudo dnf -y install tar
+confirm again:
+which tar
+tar --version
+
